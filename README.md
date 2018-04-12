@@ -25,7 +25,8 @@ State Shape:
     },
     1:{
       name: "Event 2",
-      hashtag: "twitter"
+      hashtag: "twitter",
+      posts: []
     }
   }
 }
