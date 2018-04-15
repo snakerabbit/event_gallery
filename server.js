@@ -34,18 +34,34 @@ router.get('/', function(req, res) {
   res.json({message: 'this will be the main page'});
 });
 
+router.get('/events', function(req, res) {
+  res.json({message: 'this is the main events page'});
+});
+
+
+router.route('/events/:event_id')
+  .get(function(req, res){
+    res.json({message: `this is event id: ${req.params.event_id}`});
+  });
+
 router.route('/posts')
   .get(function(req,res) {
-    res.json({message: "this is where all the posts go"});
+    let posts;
+    var error = function (err, response, body) {
+        console.log(err);
+    };
+    var success = function (data) {
+      let parsed = JSON.parse(data);
+      let statuses = parsed.statuses;
+      let entities = statuses.map(stat => stat.entities);
+      posts = entities.filter(ent => ent.media);
+      res.json({posts: posts});
+    };
+    twitter.getSearch({'q':'#selfie','count': 10, 'filter':'images', 'include_entities':true}, error, success);
   });
 router.route('/posts/:post_id')
   .get(function(req, res) {
     res.json({message: `post_id: ${req.params.post_id}`});
-  });
-
-router.route('/events')
-  .get(function(req, res){
-    res.json({message: "this is where all the events go"});
   });
 
 
