@@ -31,20 +31,24 @@ app.use(function(req, res, next) {
 });
 
 router.get('/', function(req, res) {
-  res.json({message: 'this will be the main page'});
+  res.json({message: 'API initialized'});
 });
 
+
 router.get('/events', function(req, res) {
+  //POST  to create new event
   res.json({message: 'this is the main events page'});
 });
 
 
 router.route('/events/:event_id')
   .get(function(req, res){
+    //GET individual event
     res.json({message: `this is event id: ${req.params.event_id}`});
   });
 
-router.route('/posts')
+router.route('/events/:event_id/posts')
+//GET posts
   .get(function(req,res) {
     let posts;
     var error = function (err, response, body) {
