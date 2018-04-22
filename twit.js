@@ -6,7 +6,8 @@ var success = function (data) {
   let statuses = parsed.statuses;
   let entities = statuses.map(stat => stat.entities);
   let filtered = entities.filter(ent => ent.media);
-  console.log(JSON.stringify(filtered));
+  let posts = statuses.filter(status => status.entities.media);
+  console.log(JSON.stringify(posts));
 };
 
 var Twitter = require('twitter-node-client').Twitter;

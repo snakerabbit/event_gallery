@@ -1,13 +1,14 @@
 var express = require('express');
 var mongoose = require('mongoose');
 var bodyParser = require('body-parser');
-
-
 var app = express();
 var router = express.Router();
 var port = process.env.API_PORT || 3001;
+var WebSocketServer = require('ws').Server;
+var wss = new WebSocketServer({port: 40510});
 mongoose.connect('mongodb://user:password@ds243059.mlab.com:43059/eventgallery');
 var Twitter = require('twitter-node-client').Twitter;
+var Post = require('./model/posts');
 
 var config = {
     "consumerKey": 'AstEiS2reCPdVYGdq3fN7lloW',
@@ -17,6 +18,49 @@ var config = {
 };
 
 var twitter = new Twitter(config);
+
+let posts;
+var error = function (err, response, body) {
+    console.log(err);
+};
+var success = function (data) {
+  let parsed = JSON.parse(data);
+  let statuses = parsed.statuses;
+  posts = statuses.filter(status => status.entities.media);
+  posts.forEach(post =>{
+    Post.findOne({tweet_id: post.id_str}, function(err, foundPost){
+        let newPost = foundPost || new Post();
+        newPost.user = post.user.name;
+        newPost.tweet_id = post.id_str;
+        newPost.tweet_url = `https://twitter.com/${post.user.screen_name}/status/${post.id_str}`;
+        newPost.created_at = post.created_at;
+        newPost.media_url = post.entities.media[0].expanded_url;
+        newPost.event_id = 1;
+        newPost.profile_pic_url = post.user.profile_image_url;
+        console.log(newPost);
+        newPost.save(function(err) {
+          if (err){
+            console.log(err);
+          }
+        });
+      }
+    )
+
+  });
+};
+
+wss.on('connection', function(ws) {
+  ws.send('opened!')
+  //30 requests per minute == 1 request every 2 seconds maximum
+  //https://developer.twitter.com/en/docs/basics/rate-limits.html
+  setInterval(function(){
+    twitter.getSearch({'q':'#selfie','count': 10, 'filter':'images', 'include_entities':true}, error, success);
+    ws.send('posts updated');
+  }, 3000);
+
+});
+
+
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -50,19 +94,16 @@ router.route('/events/:event_id')
 router.route('/events/:event_id/posts')
 //GET posts
   .get(function(req,res) {
-    let posts;
-    var error = function (err, response, body) {
-        console.log(err);
-    };
-    var success = function (data) {
-      let parsed = JSON.parse(data);
-      let statuses = parsed.statuses;
-      let entities = statuses.map(stat => stat.entities);
-      posts = entities.filter(ent => ent.media);
-      res.json({posts: posts});
-    };
-    twitter.getSearch({'q':'#selfie','count': 10, 'filter':'images', 'include_entities':true}, error, success);
+
+    res.json({posts: posts})
   });
+
+router.route('/testing')
+  .get(function(req, res) {
+    Post.find(function(err, allposts){
+      res.json({posts: allposts})
+    });
+  })
 router.route('/posts/:post_id')
   .get(function(req, res) {
     res.json({message: `post_id: ${req.params.post_id}`});
