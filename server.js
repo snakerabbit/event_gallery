@@ -4,12 +4,13 @@ var bodyParser = require('body-parser');
 var app = express();
 var router = express.Router();
 var port = process.env.API_PORT || 3001;
-var WebSocketServer = require('ws').Server;
-var wss = new WebSocketServer({port: 40510});
 mongoose.connect('mongodb://user:password@ds243059.mlab.com:43059/eventgallery');
-var Twitter = require('twitter-node-client').Twitter;
 var Post = require('./model/posts');
+var Event = require('./model/events');
 
+//************************ TWITTER CLIENT SETUP     ************************
+var Twitter = require('twitter-node-client').Twitter;
+var twitter = new Twitter(config);
 var config = {
     "consumerKey": 'AstEiS2reCPdVYGdq3fN7lloW',
     "consumerSecret": '30pksdC7Pvvd7PeFnkBmVwXlq2kU86nU93DeQkq4RMdU7kSyze',
@@ -17,12 +18,15 @@ var config = {
     "accessTokenSecret": 'muR2qPlfmPLGxl4D52MCZPjvBX1sSqFhKaleyFsyLCxGz'
 };
 
-var twitter = new Twitter(config);
+//************************WEB SOCKET IMPLEMENTATION ************************
 
+var WebSocketServer = require('ws').Server;
+var wss = new WebSocketServer({port: 40510});
 let posts;
 var error = function (err, response, body) {
     console.log(err);
 };
+
 var success = function (data) {
   let parsed = JSON.parse(data);
   let statuses = parsed.statuses;
@@ -45,7 +49,6 @@ var success = function (data) {
         });
       }
     )
-
   });
 };
 
@@ -61,6 +64,7 @@ wss.on('connection', function(ws) {
 });
 
 
+//************************ ROUTES ************************
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
@@ -82,12 +86,21 @@ router.get('/', function(req, res) {
 router.get('/events', function(req, res) {
   //POST  to create new event
   res.json({message: 'this is the main events page'});
+}).post(function(req, res){
+  var event = new Event();
+  (req.body.name) ? event.name = req.body.name : null;
+  (req.body.hashtag) ? comment.hashtag = req.body.hashtag : null;
+
+  event.save(function(err) {
+    if (err)
+      res.send(err);
+    res.json({ message: 'Comment successfully added!' });
+  });
 });
 
 
 router.route('/events/:event_id')
   .get(function(req, res){
-    //GET individual event
     res.json({message: `this is event id: ${req.params.event_id}`});
   });
 
@@ -98,12 +111,6 @@ router.route('/events/:event_id/posts')
     res.json({posts: posts})
   });
 
-router.route('/testing')
-  .get(function(req, res) {
-    Post.find(function(err, allposts){
-      res.json({posts: allposts})
-    });
-  })
 router.route('/posts/:post_id')
   .get(function(req, res) {
     res.json({message: `post_id: ${req.params.post_id}`});
