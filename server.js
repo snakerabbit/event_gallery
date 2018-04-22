@@ -9,14 +9,15 @@ var Post = require('./model/posts');
 var Event = require('./model/events');
 
 //************************ TWITTER CLIENT SETUP     ************************
-var Twitter = require('twitter-node-client').Twitter;
-var twitter = new Twitter(config);
 var config = {
     "consumerKey": 'AstEiS2reCPdVYGdq3fN7lloW',
     "consumerSecret": '30pksdC7Pvvd7PeFnkBmVwXlq2kU86nU93DeQkq4RMdU7kSyze',
     "accessToken": '958834013782786048-dHtXAvSncPz1iny1sO6XyUuRYqQmXso',
     "accessTokenSecret": 'muR2qPlfmPLGxl4D52MCZPjvBX1sSqFhKaleyFsyLCxGz'
 };
+var Twitter = require('twitter-node-client').Twitter;
+var twitter = new Twitter(config);
+
 
 //************************WEB SOCKET IMPLEMENTATION ************************
 
@@ -52,14 +53,20 @@ var success = function (data) {
   });
 };
 
+let currentHashtag;
 wss.on('connection', function(ws) {
   ws.send('opened!')
   //30 requests per minute == 1 request every 2 seconds maximum
-  //https://developer.twitter.com/en/docs/basics/rate-limits.html
-  setInterval(function(){
-    twitter.getSearch({'q':'#selfie','count': 10, 'filter':'images', 'include_entities':true}, error, success);
-    ws.send('posts updated');
-  }, 3000);
+  //https://developer.twitter.com/en/docs/basics/rate-limits.html;
+
+  ws.on('message', function (message){
+    setInterval(function(){
+      if(currentHashtag){
+        twitter.getSearch({'q':`#${currentHashtag}`,'count': 10, 'filter':'images', 'include_entities':true}, error, success);
+        ws.send('posts updated');
+      }
+    }, 3000);
+  })
 
 });
 
@@ -83,19 +90,25 @@ router.get('/', function(req, res) {
 });
 
 
-router.get('/events', function(req, res) {
-  //POST  to create new event
-  res.json({message: 'this is the main events page'});
-}).post(function(req, res){
-  var event = new Event();
-  (req.body.name) ? event.name = req.body.name : null;
-  (req.body.hashtag) ? comment.hashtag = req.body.hashtag : null;
+router.route('/events')
+.get(function(req, res) {
+  Event.find(function(err, events){
+      res.json({message: 'this is the main events page',
+                events: events});
+  })
 
-  event.save(function(err) {
+})
+.post(function(req, res){
+  let newEvent = new Event();
+  newEvent.name = req.query.name;
+  newEvent.hashtag = req.query.hashtag;
+  newEvent.save(function(err) {
     if (err)
       res.send(err);
-    res.json({ message: 'Comment successfully added!' });
+    res.json({ message: 'Event successfully added!' });
   });
+  currentHashtag = req.query.hashtag;
+
 });
 
 
@@ -105,10 +118,11 @@ router.route('/events/:event_id')
   });
 
 router.route('/events/:event_id/posts')
-//GET posts
   .get(function(req,res) {
+    Post.find({event_id: req.params.event_id}, function(err, allposts){
+          res.json({posts: allposts})
+    });
 
-    res.json({posts: posts})
   });
 
 router.route('/posts/:post_id')

@@ -10,4 +10,4 @@ var PostsSchema = new Schema({
   event_id: Number,
   profile_pic_url: String
 });
-module.exports = mongoose.model('Event', PostsSchema);
+module.exports = mongoose.model('Post', PostsSchema);
