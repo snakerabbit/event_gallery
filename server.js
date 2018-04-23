@@ -44,7 +44,6 @@ wss.on('connection', function(ws) {
       if(err){
         console.log('didnt find event');
       }
-
       let dbEvent = event;
       setInterval(function(){
           twitter.getSearch({'q':`#${dbEvent.hashtag}`,'count': 10, 'filter':'images', 'include_entities':true}, error, function success(data){
@@ -123,8 +122,10 @@ router.route('/events')
   let newEvent = new Event();
   newEvent.name = req.body.event.name;
   newEvent.hashtag = req.body.event.hashtag;
-  // currentEventId = newEvent._id;
-  // currentHashtag = req.body.hashtag;
+  newEvent.posts = [];
+  Post.find({tweet_id: newEvent._id}, function(err, posts){
+    newEvent.posts = posts;
+  })
   newEvent.save(function(err, event) {
     if (err){
             res.send(err);

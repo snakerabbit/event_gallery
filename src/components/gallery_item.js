@@ -8,7 +8,7 @@ class GalleryItem extends React.Component {
 
   renderTime(){
     let time;
-    let seconds = (Date.now() - Date.parse(this.props.post.created_at))/1000;
+    let seconds = Math.floor((Date.now() - Date.parse(this.props.post.created_at))/1000);
     let minutes = Math.floor(seconds/60);
     let hours = Math.floor(minutes/60);
     if (seconds > 3600){
