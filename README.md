@@ -6,4 +6,5 @@ This application provides a way to create events that are linked to hashtags, an
 ## Get Started:
 * Download the folder and unzip
 * `cd event_gallery-master` in the Mac Terminal to open the folder.
-* 
+* `npm install` to install all dependencies
+* `npm run start-dev` to run the app.
