@@ -36,6 +36,11 @@ class Gallery extends React.Component {
   }
 
   renderPosts(){
+    if(this.props.event.posts.length === 0){
+      return(
+        <div>No Posts Found</div>
+      )
+    }
     return(
       <div className ='posts'>
         {this.props.event.posts.map(post =>{

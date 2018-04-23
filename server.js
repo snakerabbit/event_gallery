@@ -51,9 +51,14 @@ wss.on('connection', function(ws) {
             let parsed = JSON.parse(data);
             let statuses = parsed.statuses;
             posts = statuses.filter(status => status.entities.media);
+            console.log(posts);
             posts.forEach(post =>{
-              Post.findOne({tweet_id: post.id}, function(error, foundpost){
-                let newPost = foundpost || new Post();
+              Post.findOne({tweet_id: post.id_str}, function(error, foundpost){
+                if(foundpost){
+                  posts = posts.filter(otherpost => otherpost.id_str !== post.id_str);
+                  Post.remove({tweet_id: post.id});
+                }
+                let newPost = new Post();
                 newPost.user = post.user.name;
                 newPost.tweet_id = post.id_str;
                 newPost.tweet_url = `https://twitter.com/${post.user.screen_name}/status/${post.id_str}`;
@@ -66,9 +71,8 @@ wss.on('connection', function(ws) {
                     console.log(err);
                   }
                 });
-                if(!foundpost){
-                  dbEvent.posts.push(newPost);
-                }
+                  dbEvent.posts.unshift(newPost);
+
               })
 
               if(dbEvent.posts.length > 20){
@@ -76,7 +80,6 @@ wss.on('connection', function(ws) {
               }
           });
           dbEvent.save(function(err, ev){
-            console.log('dbevent:', dbEvent);
             ws.send(JSON.stringify(dbEvent));
           });
 
