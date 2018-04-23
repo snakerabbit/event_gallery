@@ -4,7 +4,7 @@ var bodyParser = require('body-parser');
 var app = express();
 var router = express.Router();
 var port = process.env.API_PORT || 3001;
-mongoose.connect('mongodb://user:password@ds243059.mlab.com:43059/eventgallery');
+mongoose.connect('mongodb://heroku_rb60nxhr:u2q362mh43e5uiutkqf4452qf@ds019796.mlab.com:19796/heroku_rb60nxhr');
 var Post = require('./model/posts');
 var Event = require('./model/events');
 
