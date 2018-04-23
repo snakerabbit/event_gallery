@@ -93,12 +93,12 @@ router.get('/', function(req, res) {
 router.route('/events')
 .get(function(req, res) {
   Event.find(function(err, events){
-      res.json({message: 'this is the main events page',
-                events: events});
+      res.json({events});
   })
 
 })
 .post(function(req, res){
+  console.log(req);
   let newEvent = new Event();
   newEvent.name = req.query.name;
   newEvent.hashtag = req.query.hashtag;
