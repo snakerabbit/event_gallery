@@ -12,7 +12,7 @@ export const fetchEvent = id => {
   return (
     $.ajax({
       method: "GET",
-      url: `api/users/${id}`
+      url: `api/events/${id}`
     })
   );
 };

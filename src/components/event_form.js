@@ -1,11 +1,12 @@
 import React from 'react';
-
+import { Redirect } from 'react-router-dom';
 class EventForm extends React.Component {
   constructor(props){
     super(props);
     this.state = {
       name:'',
-      hashtag:''
+      hashtag:'',
+      redirect: false
     }
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -19,28 +20,40 @@ class EventForm extends React.Component {
 
   handleSubmit(e){
     e.preventDefault();
-    let newEvent = this.state;
-    this.props.createEvent(newEvent);
+    const newEvent = {
+      name:this.state.name,
+      hashtag:this.state.hashtag
+    };
+    this.props.createEvent(newEvent).then(
+      this.setState({
+      name:'',
+      hashtag:'',
+      redirect: true
+      }));
+
   }
   componentDidMount(){
     this.props.fetchEvents();
   }
 
   render(){
-    console.log(this.state);
-    return(
-      <div>
-        <form>
-        <label>Event Name
-          <input type="text" onChange={this.handleChange('name')}></input>
-        </label>
-        <label>Hashtag
-          <input type="text" onChange={this.handleChange('hashtag')}></input>
-        </label>
-        <input type='submit' value='Create Event'/>
-        </form>
-      </div>
-    )
+    if(this.state.redirect && this.props.event){
+      return(
+        <Redirect to={`/api/events/${this.props.event._id}`}/>
+      )
+
+    } else{
+      return(
+        <div className='event-form' >
+          <form>
+            <input type="text" className='button' onChange={this.handleChange('name')} placeholder="Event Name" value={this.state.name}></input>
+            <input type="text" className='button' onChange={this.handleChange('hashtag')} placeholder="Hashtag" value={this.state.hashtag}></input>
+            <div id='submit' className='button' onClick={this.handleSubmit}>Start Event</div>
+          </form>
+        </div>
+      )
+    }
+
   }
 }
 

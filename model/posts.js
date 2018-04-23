@@ -7,7 +7,7 @@ var PostsSchema = new Schema({
   tweet_url: String,
   created_at: String,
   media_url: String,
-  event_id: Number,
+  event_id: String,
   profile_pic_url: String
 });
 module.exports = mongoose.model('Post', PostsSchema);

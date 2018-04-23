@@ -24,50 +24,68 @@ var twitter = new Twitter(config);
 var WebSocketServer = require('ws').Server;
 var wss = new WebSocketServer({port: 40510});
 let posts;
+let currentHashtag;
+let currentEventId;
 var error = function (err, response, body) {
     console.log(err);
 };
 
-var success = function (data) {
-  let parsed = JSON.parse(data);
-  let statuses = parsed.statuses;
-  posts = statuses.filter(status => status.entities.media);
-  posts.forEach(post =>{
-    Post.findOne({tweet_id: post.id_str}, function(err, foundPost){
-        let newPost = foundPost || new Post();
-        newPost.user = post.user.name;
-        newPost.tweet_id = post.id_str;
-        newPost.tweet_url = `https://twitter.com/${post.user.screen_name}/status/${post.id_str}`;
-        newPost.created_at = post.created_at;
-        newPost.media_url = post.entities.media[0].expanded_url;
-        newPost.event_id = 1;
-        newPost.profile_pic_url = post.user.profile_image_url;
-        console.log(newPost);
-        newPost.save(function(err) {
-          if (err){
-            console.log(err);
-          }
-        });
-      }
-    )
-  });
-};
-
-let currentHashtag;
+let clients = {};
 wss.on('connection', function(ws) {
   ws.send('opened!')
-  //30 requests per minute == 1 request every 2 seconds maximum
-  //https://developer.twitter.com/en/docs/basics/rate-limits.html;
-
-  ws.on('message', function (message){
-    setInterval(function(){
-      if(currentHashtag){
-        twitter.getSearch({'q':`#${currentHashtag}`,'count': 10, 'filter':'images', 'include_entities':true}, error, success);
-        ws.send('posts updated');
+//   //30 requests per minute == 1 request every 2 seconds maximum
+//   //https://developer.twitter.com/en/docs/basics/rate-limits.html;
+  ws.on('message', function (event){
+    let currentEvent= JSON.parse(event);
+    if(!clients[currentEvent._id]){
+      clients[currentEvent._id] = ws;
+    }
+    Event.findOne({_id: currentEvent._id}, function(err, event){
+      if(err){
+        console.log('didnt find event');
       }
-    }, 3000);
-  })
 
+      let dbEvent = event;
+      setInterval(function(){
+          twitter.getSearch({'q':`#${dbEvent.hashtag}`,'count': 10, 'filter':'images', 'include_entities':true}, error, function success(data){
+            let parsed = JSON.parse(data);
+            let statuses = parsed.statuses;
+            posts = statuses.filter(status => status.entities.media);
+            posts.forEach(post =>{
+              Post.findOne({tweet_id: post.id}, function(error, foundpost){
+                let newPost = foundpost || new Post();
+                newPost.user = post.user.name;
+                newPost.tweet_id = post.id_str;
+                newPost.tweet_url = `https://twitter.com/${post.user.screen_name}/status/${post.id_str}`;
+                newPost.created_at = post.created_at;
+                newPost.media_url = post.entities.media[0].media_url;
+                newPost.event_id = dbEvent.id;
+                newPost.profile_pic_url = post.user.profile_image_url;
+                newPost.save(function(err) {
+                  if (err){
+                    console.log(err);
+                  }
+                });
+                if(!foundpost){
+                  dbEvent.posts.push(newPost);
+                }
+              })
+
+              if(dbEvent.posts.length > 20){
+                dbEvent.posts.shift();
+              }
+          });
+          dbEvent.save(function(err, ev){
+            console.log('dbevent:', dbEvent);
+            ws.send(JSON.stringify(dbEvent));
+          });
+
+      });
+    }, 3000);
+  });
+
+})
+//
 });
 
 
@@ -93,42 +111,53 @@ router.get('/', function(req, res) {
 router.route('/events')
 .get(function(req, res) {
   Event.find(function(err, events){
-      res.json({events});
+      res.json(events);
   })
 
 })
 .post(function(req, res){
   console.log(req);
   let newEvent = new Event();
-  newEvent.name = req.query.name;
-  newEvent.hashtag = req.query.hashtag;
-  newEvent.save(function(err) {
-    if (err)
-      res.send(err);
-    res.json({ message: 'Event successfully added!' });
+  newEvent.name = req.body.event.name;
+  newEvent.hashtag = req.body.event.hashtag;
+  // currentEventId = newEvent._id;
+  // currentHashtag = req.body.hashtag;
+  newEvent.save(function(err, event) {
+    if (err){
+            res.send(err);
+    }
+    res.json(event);
   });
-  currentHashtag = req.query.hashtag;
-
 });
 
-
+// router.route('/test')
+// .get(function(req, res){
+//   Post.find({event_id: currentEventId}, function(err, allposts){
+//         res.json({posts: allposts})
+//   });
+// })
 router.route('/events/:event_id')
   .get(function(req, res){
-    res.json({message: `this is event id: ${req.params.event_id}`});
+    Event.findOne({_id: req.params.event_id}, function(err, event){
+      if(err){
+        console.log(err);
+      }
+      res.json(event)
+    })
   });
-
-router.route('/events/:event_id/posts')
-  .get(function(req,res) {
-    Post.find({event_id: req.params.event_id}, function(err, allposts){
-          res.json({posts: allposts})
-    });
-
-  });
-
-router.route('/posts/:post_id')
-  .get(function(req, res) {
-    res.json({message: `post_id: ${req.params.post_id}`});
-  });
+//
+// router.route('/events/:event_id/posts')
+//   .get(function(req,res) {
+//     Post.find({event_id: req.params.event_id}, function(err, allposts){
+//           res.json({posts: allposts})
+//     });
+//
+//   });
+//
+// router.route('/posts/:post_id')
+//   .get(function(req, res) {
+//     res.json({message: `post_id: ${req.params.post_id}`});
+//   });
 
 
 app.use('/api', router);

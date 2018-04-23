@@ -1,11 +1,12 @@
 import { connect } from 'react-redux';
 import EventForm from './event_form';
-import { createEvent, fetchEvents } from '../actions/events_actions';
+import { createEvent, fetchEvents, fetchEvent } from '../actions/events_actions';
 
 
 const mapStateToProps = state => {
   return({
-    events: state.events
+    events: state.events,
+    event: state.event
   });
 };
 
@@ -13,7 +14,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => {
   return({
     createEvent: (event) => dispatch(createEvent(event)),
-    fetchEvents: () => dispatch(fetchEvents())
+    fetchEvents: () => dispatch(fetchEvents()),
+    fetchEvent: id => dispatch(fetchEvent(id))
   });
 };
 
